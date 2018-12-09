@@ -1,0 +1,165 @@
+import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import pandas as pd #数据分析
+from sklearn.cluster import KMeans
+from pylab import *
+mpl.rcParams['font.sans-serif'] = ['SimHei']
+
+# # 统计 存活/死亡 人数
+def sur_die_analysis(data_train):
+    # fig = plt.figure()
+    # fig.set(alpha=0.2)  # 设定图表颜色alpha参数
+    data_train.Survived.value_counts().plot(kind='bar')# 柱状图
+    plt.title(u"获救情况 (1为获救)") # 标题
+    plt.ylabel(u"人数")
+    plt.show()
+
+# PClass
+def pclass_analysis(data_train):
+    sur_data = data_train.Pclass[data_train.Survived == 1].value_counts()
+    die_data = data_train.Pclass[data_train.Survived == 0].value_counts()
+    pd.DataFrame({'Survived':sur_data,'Died':die_data}).plot(kind='bar')
+    plt.ylabel(u"人数")
+    plt.title(u"乘客等级分布")
+    plt.show()
+
+#Sex
+def sex_analysis(data_train):
+    no_survived_g = data_train.Sex[data_train.Survived == 0].value_counts()
+    no_survived_g.to_csv("no_survived_g.csv")
+    survived_g = data_train.Sex[data_train.Survived == 1].value_counts()
+    df_g = pd.DataFrame({'Survived': survived_g, 'Died': no_survived_g})
+    df_g.plot(kind='bar', stacked=True)
+    plt.title('性别存活率分析')
+    plt.xlabel('People')
+    plt.ylabel('Survive')
+    plt.show()
+
+# age : 将年龄分成十段，分别统计 存活人数和死亡人数
+def age_analysis(data_train):
+    data_series = pd.DataFrame(columns=['Survived', 'dies'])
+    cloms = []
+    for num in range(0, 10):
+        clo  = "" + str(num * 10) + "-" + str((num + 1) * 10)
+        cloms.append(clo)
+        sur_df = data_train.Age[(10 * (num + 1) > data_train.Age) & (10 * num < data_train.Age) & (data_train.Survived == 1)].shape[0]
+        die_df = data_train.Age[(10 * (num + 1) > data_train.Age) & (10 * num < data_train.Age) & (data_train.Survived == 0)].shape[0]
+        total = sur_df + die_df;
+        sur_rate = sur_df/(total+1);
+        die_rate = die_df/(total+1);
+        data_series.loc[num] = [sur_rate,die_rate]
+    data_series.to_csv("data_series.csv")
+    data_series.index = cloms
+    data_series.plot(kind='bar', stacked=True)
+    plt.ylabel(u"存活率")  # 设定纵坐标名称
+    plt.grid(b=True, which='major', axis='y')
+    plt.title(u"按年龄看获救分布")
+    plt.show()
+
+# Family: Sibsp + Parch 家庭成员人数
+def family_analysis(data_train):
+    data_train['Family'] = data_train['SibSp'] + data_train['Parch']
+    data_train.loc[(data_train.Family == 0), 'Family'] = 0
+    data_train.loc[((data_train.Family > 0) & (data_train.Family < 4)), 'Family'] = 1
+    data_train.loc[((data_train.Family >= 4)), 'Family'] = 2
+
+    no_survived_g = data_train.Family[data_train.Survived == 0].value_counts()
+    survived_g = data_train.Family[data_train.Survived == 1].value_counts()
+    df_g = pd.DataFrame({'Survived': survived_g, 'Died': no_survived_g})
+    df_g.plot(kind='bar', stacked=True)
+    plt.title('家庭成员分析')
+    plt.xlabel('等级：0-无 1-（1~4） 2-（>4）')
+    plt.ylabel('存活情况')
+    plt.show()
+
+#Embarked 上船港口情况
+def embarked_analysis(data_train):
+    no_survived_g = data_train.Embarked[data_train.Survived == 0].value_counts()
+    survived_g = data_train.Embarked[data_train.Survived == 1].value_counts()
+    df_g = pd.DataFrame({'Survived': survived_g, 'Died': no_survived_g})
+    df_g.plot(kind='bar', stacked=True)
+    plt.title('登陆港口-存活情况分析')
+    plt.xlabel('Embarked')
+    plt.ylabel('Survive')
+    plt.show()
+
+# Fare
+def fare_analysis(data_train):
+    # data_train.Fare[data_train.Survived == 1].plot(kind='kde')
+    # data_train.Fare[data_train.Survived == 0].plot(kind='kde')
+    # data_train["Fare"].plot(kind='kde')
+    # plt.legend(('survived', 'died','all'), loc='best')
+    # plt.show()
+    data_train['NewFare'] = data_train['Fare']
+    data_train.loc[(data_train.Fare < 50), 'NewFare'] = 0
+    data_train.loc[((data_train.Fare>=50) & (data_train.Fare<100)), 'NewFare'] = 1
+    data_train.loc[((data_train.Fare >= 100) & (data_train.Fare < 150)), 'NewFare'] = 2
+    data_train.loc[((data_train.Fare >= 150) & (data_train.Fare < 200)), 'NewFare'] = 3
+    data_train.loc[(data_train.Fare >= 200), 'NewFare'] = 4
+    no_survived_g = data_train.NewFare[data_train.Survived == 0].value_counts()
+    survived_g = data_train.NewFare[data_train.Survived == 1].value_counts()
+    df_g = pd.DataFrame({'Survived': survived_g, 'Died': no_survived_g})
+    df_g.plot(kind='bar', stacked=True)
+    plt.title('费用-生存分析')
+    plt.xlabel('费用等级')
+    plt.ylabel('存活情况')
+    plt.show()
+
+#将费用进行聚类，发现 类别数为 5 时聚合的效果最好
+def fare_kmeans(data_train):
+    clusters = KMeans(n_clusters=5)
+    clusters.fit(data_train['Fare'].values.reshape(-1, 1))
+    predict = clusters.predict(data_train['Fare'].values.reshape(-1, 1))
+    print(predict)
+    data_train['NewFare'] = predict
+    print(data_train[['NewFare','Survived']].groupby(['NewFare'],as_index=False).mean())
+    print(" "  + str(clusters.inertia_))
+
+#去除离群点
+#####--------------------------------------------------------------------------------------------------
+#离群点检测
+def detect_outliers(df,n,features):
+    '''
+    输入：
+    df：数据框，为需要检测的样本集
+    n：正整数，样本特征超出四分位极差个数的上限，有这么多个特征超出则样本为离群点
+    features:列表，用于检测是否离群的特征
+    输出：
+
+    '''
+    outlier_indices=[]
+    outlier_list_col_index=pd.DataFrame()
+
+    #对每一个变量进行检测
+    for col in features:
+        #计算四分位数相关信息
+        Q1=np.percentile(df[col],25)
+        Q3=np.percentile(df[col],75)
+        IQR=Q3-Q1
+        #计算离群范围
+        outlier_step=1.5*IQR
+        #计算四分位数时如果数据上有空值，这些空值也是参与统计的，所以统计出来的Q1、Q3、IQR这些数据有可能是NAN，但是这并不要紧，在判断是否大于或小于的时候跟NAN比较一定是false，因而样本并不会因为空值而被删除掉
+        #空值会在后面特征工程时再做处理
+
+        #找出特征col中显示的离群样本的索引
+        outlier_list_col=df[(df[col]<Q1-outlier_step)|(df[col]>Q3+outlier_step)].index
+        #额外存储每一个特征在各样本中的离群判断
+        temp=pd.DataFrame((df[col]<Q1-outlier_step)|(df[col]>Q3+outlier_step),columns=[col])
+        #将索引添加到一个综合列表中，如果某个样本有多个特征出现离群点，则该样本的索引会多次出现在outlier_indices里
+        outlier_indices.extend(outlier_list_col)
+        #额外存储每一个特征在各样本中的离群判断，方便查看数据
+        outlier_list_col_index=pd.concat(objs=[outlier_list_col_index,temp],axis=1)
+    #选出有n个以上特征存在离群现象的样本
+    outlier_indices=Counter(outlier_indices)
+    multiple_outliers=list(k for k,v in outlier_indices.items() if v>n)
+    return multiple_outliers,outlier_list_col_index
+
+#获取离群点
+
+
+data_train = pd.read_csv("../data/train.csv")
+print(data_train.describe())
+fare_kmeans(data_train)
+#outliers_to_drop,outlier_col_index=detect_outliers(data_train,2,["Age","SibSp","Parch","Fare"])
+#这里选取了"Age","SibSp","ParCh","Fare"四个数值型变量；另一个数值型变量舱位等级没选是因为该变量只有1、2、3级不可能有离群点，其他符号型变量诸如性别、登录港口，也只有有限的类型，一般不可能离群，也没有必要分析是否离群。
+
